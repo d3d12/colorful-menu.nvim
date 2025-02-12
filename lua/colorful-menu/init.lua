@@ -51,6 +51,9 @@ M.config = {
         basedpyright = {
             extra_info_hl = "@comment",
         },
+        dartls = {
+            extra_info_hl = "@comment",
+        },
         fallback = true,
     },
     fallback_highlight = "@variable",
@@ -63,6 +66,16 @@ local function apply_post_processing(item)
     -- if the user override or fallback logic didn't produce a table, bail
     if type(item) ~= "table" or not item.text then
         return item
+    end
+
+    for i = #item.highlights, 1, -1 do
+        local hl = item.highlights[i]
+        local range = hl.range
+        if range[2] < 0 then
+            table.remove(item.highlights, i)
+        elseif range[1] < 0 then
+            range[1] = 0
+        end
     end
 
     local text = item.text
@@ -84,6 +97,10 @@ local function apply_post_processing(item)
                     range[2] = truncated_width + 3
                 end
             end
+            table.insert(item.highlights, {
+                "@comment",
+                range = { truncated_width - 1, truncated_width },
+            })
         end
     end
 end
@@ -98,14 +115,15 @@ local MAX_HL_CACHE_SIZE = 10000
 ---@return string
 local function cache_key(completion_item, ls)
     return string.format(
-        "%s!%s!%s!%s!%s",
+        "%s!%s!%s!%s!%s%s",
         completion_item.label or "",
         completion_item.detail or "",
         completion_item.labelDetails
                 and (completion_item.labelDetails.detail or "") .. (completion_item.labelDetails.description or "")
             or "",
         completion_item.kind and tostring(completion_item.kind) or "",
-        ls
+        ls,
+        require("colorful-menu.utils").max_width()
     )
 end
 
@@ -151,6 +169,9 @@ local function _highlights(completion_item, ls)
     elseif ls == "roslyn" then
         item = require("colorful-menu.languages.cs").roslyn(completion_item, ls)
         --
+    elseif ls == "dartls" then
+        item = require("colorful-menu.languages.dart").dartls(completion_item, ls)
+        --
     elseif ls == "basedpyright" or ls == "pyright" or ls == "pylance" then
         item = require("colorful-menu.languages.python").basedpyright(completion_item, "basedpyright")
         --
@@ -194,7 +215,7 @@ end
 ---@diagnostic disable-next-line: undefined-doc-name
 ---@param ctx blink.cmp.DrawItemContext
 function M.blink_components_text(ctx)
-    local highlights_info = require("colorful-menu").blink_highlights(ctx)
+    local highlights_info = M.blink_highlights(ctx)
     if highlights_info ~= nil then
         return highlights_info.label
     else
@@ -207,7 +228,7 @@ end
 ---@param ctx blink.cmp.DrawItemContext
 function M.blink_components_highlight(ctx)
     local highlights = {}
-    local highlights_info = require("colorful-menu").blink_highlights(ctx)
+    local highlights_info = M.blink_highlights(ctx)
     if highlights_info ~= nil then
         highlights = highlights_info.highlights
     end

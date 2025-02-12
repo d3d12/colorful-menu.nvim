@@ -18,6 +18,7 @@ Has built-in support for
 - [**zls (Zig)**](#zls)
 - [**roslyn (C#)**](#roslyn)
 - [**basedpyright/pylance/pyright (Python)**](#basedpyright)
+- [**dartls (Dart)**](#dartls)
 
 For other languages, it defaults to use highlight group of item's kind.
 (feel free to open feature request for more languages)
@@ -53,7 +54,7 @@ return {
                     align_type_to_right = true,
                     -- When true, label for field and variable will format like "foo: Foo"
                     -- instead of go's original syntax "foo Foo". If align_type_to_right is
-					-- true, this option has no effect.
+                    -- true, this option has no effect.
                     add_colon_before_type = false,
                 },
                 -- for lsp_config or typescript-tools
@@ -82,6 +83,9 @@ return {
                     align_type_to_right = true,
                 },
                 roslyn = {
+                    extra_info_hl = "@comment",
+                },
+                dartls = {
                     extra_info_hl = "@comment",
                 },
                 -- The same applies to pyright/pylance
@@ -272,6 +276,14 @@ Thanks to [@seblj](https://github.com/seblj)
 
 ## after:
 <img width="825" alt="image" src="https://github.com/user-attachments/assets/4e19119d-a064-41da-b987-0a8ef9d0faad" />
+
+# dartls
+## before:
+<img width="566" alt="image" src="https://github.com/user-attachments/assets/53f81c16-6b9f-4449-925f-6b2d92bb8a78" />
+
+## after:
+<img width="915" alt="image" src="https://github.com/user-attachments/assets/e1c65794-44c5-4e70-b7eb-a639dac6a56c" />
+
 
 
 ## Contributing

@@ -100,6 +100,8 @@ function M.highlight_range(text, ls, left, right)
     }
 end
 
+-- Shift a highlight range right by name_offset,
+-- insert a color with fallback_hl for label with range (0, name_offset).
 ---@param item CMHighlights
 ---@param name_offset integer
 ---@param label string
@@ -139,6 +141,8 @@ function M.hl_by_kind(kind)
         highlight_name = M.hl_exist_or("@lsp.type.method", "@function")
     elseif kind == Kind.Function then
         highlight_name = M.hl_exist_or("@lsp.type.function", "@function")
+    elseif kind == Kind.Constructor then
+        highlight_name = "@constructor"
     elseif kind == Kind.Variable then
         highlight_name = M.hl_exist_or("@lsp.type.variable", "@variable")
     elseif kind == Kind.Field then
