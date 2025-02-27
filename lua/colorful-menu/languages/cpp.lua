@@ -8,14 +8,14 @@ local function align_spaces(abbr, detail)
     if config.ls.clangd.align_type_to_right == false then
         return ""
     end
-    return utils.align_spaces(abbr, detail)
+    return utils.align_spaces_bell(abbr, detail)
 end
 
 local function path_align_spaces(abbr, detail)
     if config.ls.clangd.align_type_to_right == false then
         return "  "
     end
-    return utils.align_spaces(abbr, detail)
+    return utils.align_spaces_bell(abbr, detail)
 end
 
 ---@param completion_item lsp.CompletionItem
@@ -68,14 +68,15 @@ local function _clangd(completion_item, ls)
         --
     else
         local highlight_name = nil
+        local lang = vim.bo.filetype == "c" and "c" or "cpp"
         if kind == Kind.Struct or kind == Kind.Interface then
             highlight_name = "@type"
         elseif kind == Kind.Class then
-            highlight_name = utils.hl_exist_or("@lsp.type.class", "@variant")
+            highlight_name = utils.hl_exist_or("@lsp.type.class", "@variant", lang)
         elseif kind == Kind.EnumMember then
-            highlight_name = utils.hl_exist_or("@lsp.type.enumMember", "@variant")
+            highlight_name = utils.hl_exist_or("@lsp.type.enumMember", "@variant", lang)
         elseif kind == Kind.Enum then
-            highlight_name = utils.hl_exist_or("@lsp.type.enum", "@type")
+            highlight_name = utils.hl_exist_or("@lsp.type.enum", "@type", lang)
         elseif kind == Kind.Keyword then
             highlight_name = "@keyword"
         elseif kind == Kind.Value or kind == Kind.Constant then

@@ -9,7 +9,18 @@ local function align_spaces(abbr, detail)
     if config.ls["rust-analyzer"].align_type_to_right == false then
         return " "
     end
-    return utils.align_spaces(abbr, detail)
+    return utils.align_spaces_bell(abbr, detail)
+end
+
+local cashed_self_hl = nil
+---@return CMHighlightRange[]
+local function iter_chain()
+    if cashed_self_hl == nil then
+        local source = "fn iter(){}"
+        local hl = utils.highlight_range(source, "rust-analyzer", 3, #source - 2)
+        cashed_self_hl = hl.highlights
+    end
+    return cashed_self_hl
 end
 
 ---@param completion_item lsp.CompletionItem
@@ -61,10 +72,28 @@ local function _rust_analyzer(completion_item, ls)
         --
     elseif (kind == Kind.Function or kind == Kind.Method) and detail then
         local pattern = "%((.-)%)"
-        local result = string.match(completion_item.label, pattern)
         local label = completion_item.label
+
+        local ignored = nil
+        if label:match("^iter%(%)%..+") ~= nil then
+            ignored = "iter()."
+            label = completion_item.label:sub(string.len(ignored) + 1)
+        end
+        if label:match("^self%..+") ~= nil then
+            ignored = "self."
+            label = completion_item.label:sub(string.len(ignored) + 1)
+        end
+        local function adjust(hl)
+            if ignored == "self." then
+                utils.adjust_range(hl, string.len(ignored) + 1, ignored)
+            elseif ignored == "iter()." then
+                utils.adjust_range(hl, string.len(ignored) + 1, ignored, nil, iter_chain())
+            end
+        end
+
+        local result = string.match(label, pattern)
         if not result then
-            label = completion_item.label .. "()"
+            label = label .. "()"
         end
         local regex_pattern = "%b()"
         local prefix, suffix = string.match(function_signature or "", "^(.*fn)(.*)$")
@@ -73,17 +102,45 @@ local function _rust_analyzer(completion_item, ls)
             if start_pos then
                 suffix = suffix:sub(start_pos, #suffix)
             end
-            -- Replace the regex pattern in completion.label with the suffix
-            local text, num_subs = string.gsub(label, regex_pattern, suffix, 1)
-            -- If no substitution occurred, use the original label
-            if num_subs == 0 then
-                text = label
+
+            if
+                config.ls["rust-analyzer"].preserve_type_when_truncate
+                and config.ls["rust-analyzer"].align_type_to_right
+            then
+                local params, type = string.match(suffix, "(%b()) %-> (.*)")
+                if params == nil and type == nil then
+                    params = suffix
+                    type = ""
+                end
+                local call, num_subs = string.gsub(label, regex_pattern, params, 1)
+                if num_subs == 0 then
+                    call = completion_item.label
+                end
+                local source = string.format(
+                    "%s %s->%s%s{}",
+                    prefix,
+                    call,
+                    align_spaces(call .. "  ", ignored ~= nil and type .. ignored or type),
+                    type or ""
+                )
+                local hl = utils.highlight_range(source, ls, #prefix + 1, #source - 2)
+                hl.text = hl.text:sub(1, #call) .. "  " .. hl.text:sub(#call + 3)
+                if ignored ~= nil then
+                    adjust(hl)
+                end
+                return hl
+            else
+                local call, num_subs = string.gsub(label, regex_pattern, suffix, 1)
+                if num_subs == 0 then
+                    call = label
+                end
+                local source = string.format("%s %s {}", prefix, call)
+                local hl = utils.highlight_range(source, ls, #prefix + 1, #source - 3)
+                if ignored ~= nil then
+                    adjust(hl)
+                end
+                return hl
             end
-
-            -- Construct the fake source string as in Rust
-            local source = string.format("%s %s {}", prefix, text)
-
-            return utils.highlight_range(source, ls, #prefix + 1, #source - 3)
         else
             -- Check if the detail starts with "macro_rules! "
             if completion_item.detail and vim.startswith(completion_item.detail, "macro") then
@@ -108,11 +165,11 @@ local function _rust_analyzer(completion_item, ls)
         if kind == Kind.Struct then
             highlight_name = "@type"
         elseif kind == Kind.Enum then
-            highlight_name = utils.hl_exist_or("@lsp.type.enum.rust", "@type")
+            highlight_name = utils.hl_exist_or("@lsp.type.enum", "@type", "rust")
         elseif kind == Kind.EnumMember then
-            highlight_name = utils.hl_exist_or("@lsp.type.enumMember.rust", "@constant")
+            highlight_name = utils.hl_exist_or("@lsp.type.enumMember", "@constant", "rust")
         elseif kind == Kind.Interface then
-            highlight_name = utils.hl_exist_or("@lsp.type.interface.rust", "@type")
+            highlight_name = utils.hl_exist_or("@lsp.type.interface", "@type", "rust")
         elseif kind == Kind.Keyword then
             highlight_name = "@keyword"
         elseif kind == Kind.Value or kind == Kind.Constant then

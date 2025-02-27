@@ -12,7 +12,7 @@ function M.ts_server(completion_item, ls)
     local detail = completion_item.detail
     local kind = completion_item.kind
     -- Combine label + detail for final display
-    local text = detail and (label .. " " .. detail) or label
+    local text = (detail and config.ls.ts_ls.extra_info_hl ~= false) and (label .. " " .. detail) or label
 
     if not kind then
         return utils.highlight_range(text, ls, 0, #text)
@@ -44,7 +44,7 @@ function M.ts_server(completion_item, ls)
         },
     }
 
-    if detail then
+    if detail and config.ls.ts_ls.extra_info_hl ~= false then
         local extra_info_hl = config.ls.ts_ls.extra_info_hl
         table.insert(highlights, {
             extra_info_hl,
@@ -104,18 +104,20 @@ function M.vtsls(completion_item, ls)
         },
     }
     local text = label
-    if description then
-        text = label .. " " .. one_line(description)
-        table.insert(highlights, {
-            config.ls.vtsls.extra_info_hl,
-            range = { #label + 1, #text - 1 },
-        })
-    elseif detail then
-        text = label .. " " .. one_line(detail)
-        table.insert(highlights, {
-            config.ls.vtsls.extra_info_hl,
-            range = { #label + 1, #text - 1 },
-        })
+    if config.ls.vtsls.extra_info_hl ~= false then
+        if description then
+            text = label .. " " .. one_line(description)
+            table.insert(highlights, {
+                config.ls.vtsls.extra_info_hl,
+                range = { #label + 1, #text - 1 },
+            })
+        elseif detail then
+            text = label .. " " .. one_line(detail)
+            table.insert(highlights, {
+                config.ls.vtsls.extra_info_hl,
+                range = { #label + 1, #text - 1 },
+            })
+        end
     end
 
     return {

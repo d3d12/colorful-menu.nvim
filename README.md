@@ -56,12 +56,18 @@ return {
                     -- instead of go's original syntax "foo Foo". If align_type_to_right is
                     -- true, this option has no effect.
                     add_colon_before_type = false,
+                    -- See https://github.com/xzbdmw/colorful-menu.nvim/pull/36
+                    preserve_type_when_truncate = true,
                 },
                 -- for lsp_config or typescript-tools
                 ts_ls = {
+                    -- false means do not include any extra info,
+                    -- see https://github.com/xzbdmw/colorful-menu.nvim/issues/42
                     extra_info_hl = "@comment",
                 },
                 vtsls = {
+                    -- false means do not include any extra info,
+                    -- see https://github.com/xzbdmw/colorful-menu.nvim/issues/42
                     extra_info_hl = "@comment",
                 },
                 ["rust-analyzer"] = {
@@ -69,6 +75,8 @@ return {
                     extra_info_hl = "@comment",
                     -- Similar to the same setting of gopls.
                     align_type_to_right = true,
+                    -- See https://github.com/xzbdmw/colorful-menu.nvim/pull/36
+                    preserve_type_when_truncate = true,
                 },
                 clangd = {
                     -- Such as "From <stdio.h>".
@@ -77,6 +85,8 @@ return {
                     align_type_to_right = true,
                     -- the hl group of leading dot of "•std::filesystem::permissions(..)"
                     import_dot_hl = "@comment",
+                    -- See https://github.com/xzbdmw/colorful-menu.nvim/pull/36
+                    preserve_type_when_truncate = true,
                 },
                 zls = {
                     -- Similar to the same setting of gopls.
@@ -93,11 +103,12 @@ return {
                     -- It is usually import path such as "os"
                     extra_info_hl = "@comment",
                 },
-
                 -- If true, try to highlight "not supported" languages.
                 fallback = true,
+                -- this will be applied to label description for unsupport languages
+                fallback_extra_info_hl = "@comment",
             },
-            -- If the built-in logic fails to find a suitable highlight group,
+            -- If the built-in logic fails to find a suitable highlight group for a label,
             -- this highlight is applied to the label.
             fallback_highlight = "@variable",
             -- If provided, the plugin truncates the final displayed text to
@@ -205,6 +216,39 @@ config = function()
         },
     })
 end
+```
+</details>
+
+## Custom configuration with `lspkind.nvim`
+
+You can configure your completion engine (below is for `nvim-cmp` with both `colorful-menu.nvim` and `lspkind.nvim` to get completion menu like those in Screen section.
+<details>
+<summary>Click to see</summary>
+
+```lua
+formatting = {
+  fields = { "kind", "abbr", "menu" },
+
+  format = function(entry, vim_item)
+    local kind = require("lspkind").cmp_format({
+        mode = "symbol_text",
+    })(entry, vim.deepcopy(vim_item))
+    local highlights_info = require("colorful-menu").cmp_highlights(entry)
+
+    -- highlight_info is nil means we are missing the ts parser, it's
+    -- better to fallback to use default `vim_item.abbr`. What this plugin
+    -- offers is two fields: `vim_item.abbr_hl_group` and `vim_item.abbr`.
+    if highlights_info ~= nil then
+        vim_item.abbr_hl_group = highlights_info.highlights
+        vim_item.abbr = highlights_info.text
+    end
+    local strings = vim.split(kind.kind, "%s", { trimempty = true })
+    vim_item.kind = " " .. (strings[1] or "") .. " "
+    vim_item.menu = ""
+
+    return vim_item
+  end,
+}
 ```
 </details>
 
